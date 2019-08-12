@@ -9,7 +9,7 @@ class SelectedData:
         self.rows_list = rows_list          #list of lists of rows selected
         self.categories = categories
 
-    def save (self):
+    def save (self, rowIndex, row):
         raise NotImplementedError() #On purpose, this is an interface
 
     def selectCategory (self, category, currentIndex):
@@ -25,10 +25,10 @@ class FakeDataForTests (SelectedData):
             [1533, 2016, 'transaction', 20000, 'Le Parc restaurant', 19],
             [1534, 2017, 'payment', 200000, 'United Airlines', 987],
         ]
-        self.categories = ['airline', 'banking transaction', 'restaurant/shop/convenience store']
+        self.categories = ['airline', 'banking transaction', 'restaurant/shop/convenience store', 'online shopping', 'cash withdrawal']
 
-    def save (self):
-        pass #Empty on purpose
+    def save (self, rowIndex, row):
+        self.rows_list[rowIndex] = row
 
     def selectCategory (self, category, currentIndex):
         categoryIndex = self.column_names.index ('category_id')
@@ -94,6 +94,9 @@ class SpreadSheet:
 
         self.AddColumns ()
 
+        self.AddPrevButton ()
+        self.AddNextButton ()
+
         #Todo:
         #The width needs to exceed the sum of widths of each column (except the last empty column)
         #We need to use another number for this width...
@@ -123,21 +126,21 @@ class SpreadSheet:
         frame.columnconfigure (0, weight = 1)
         frame.rowconfigure (1, weight = 1)
 
+        self.panedWindow.add (frame, width = max (len (headerText), len (str (firstRow))) * 7 + 10)
+
         headerCell = HeaderCell (frame, headerText)
         editableCell = EditableCell (frame, firstRow)
-
-        self.panedWindow.add (frame, width = max (len (headerText), len (str (firstRow))) * 7 + 10)
 
         headerCell.widget.grid (row = 0, column = 0, sticky = 'news')
         editableCell.widget.grid (row = 1, column = 0, sticky = 'news')
 
+        #Add empty cells in order to fill the empty space at the bottom of the column
         if headerText != 'candidate category ids':
-            emptyCells = [tk.Label (frame) for i in range (max (0, len (self.selected_data.categories)))]
+            emptyCells = [tk.Label (frame) for i in range (max (0, len (self.selected_data.categories) - 1))]
             i = 3
             for emptyCell in emptyCells:
-                emptyCell.grid (row = i, column = 0, sticky = 'news')
+                emptyCell.grid (row = i, column = 0, sticky = 'news', rowspan = 1)
                 i += 1
-        print (headerText)
 
         return editableCell
 
@@ -145,20 +148,59 @@ class SpreadSheet:
         frame = tk.Frame (panedWindow)
         panedWindow.add (frame, stretch = "always")
 
-    def MoveToNext (self):
-        try:
-            i = 0
-            for cell in self.editableCells:
-                value = self.selected_data.rows_list[self.current_index + 1][i]
-                cell.var.set (value)
-                cell.oldValue = value
-                cell.labelVar.set (value)
-                cell.edit ()
-                i += 1
-        except IndexError:
-            return
+    def AddNextButton (self):
+        self.nextImage = tk.PhotoImage (file = r'C:\dev\python\paned_window\Button Next_256.png').subsample (15, 15)
+        nextButton = tk.Button (
+            self.frameRoot,
+            text = 'Save and Next ',
+            image = self.nextImage,
+            compound = tk.RIGHT,
+            command = self.MoveToNext,
+            pady = 10
+            )
+        nextButton.pack (side = tk.LEFT, anchor = 'w', pady = 10, padx = 10)
 
-        self.current_index += 1
+    def AddPrevButton (self):
+        self.prevImage = tk.PhotoImage (file = r'C:\dev\python\paned_window\Button Previous_256.png').subsample (15, 15)
+        nextButton = tk.Button (
+            self.frameRoot,
+            text = ' Save and Previous',
+            image = self.prevImage,
+            compound = tk.LEFT,
+            command = self.MoveToPrev,
+            pady = 10
+            )
+        nextButton.pack (side = tk.LEFT, anchor = 'w', pady = 10, padx = 10)
+
+    def UpdateCells (self, row):
+        i = 0
+        for cell in self.editableCells:
+            value = self.selected_data.rows_list[row][i]
+            cell.var.set (value)
+            cell.oldValue = value
+            cell.labelVar.set (value)
+            cell.edit ()
+            i += 1
+
+    def MoveToNext (self):
+        #Save to the current data
+        self.selected_data.save (self.current_index, [cell.var.get () for cell in self.editableCells])
+        self.UpdateCells (self.current_index)
+
+        #Move the index
+        if self.current_index < len (self.selected_data.rows_list) - 1:
+            self.current_index += 1
+            self.UpdateCells (self.current_index)
+
+    def MoveToPrev (self):
+        #Save to the current data
+        self.selected_data.save (self.current_index, [cell.var.get () for cell in self.editableCells])
+        self.UpdateCells (self.current_index)
+
+        #Move the index
+        if self.current_index > 0:
+            self.current_index -= 1
+            self.UpdateCells (self.current_index)
 
     def SelectCategory (self, category, editableCell):
         self.currentCategory = category
@@ -166,9 +208,6 @@ class SpreadSheet:
         self.selected_data.selectCategory (category, self.current_index)
 
     def AddCategoryColumn (self, categories, editableCell):
-        if not categories:
-            pass
-
         frame = tk.Frame (self.panedWindow)
         frame.grid (column = 0, row = 0, sticky = 'news')
         frame.columnconfigure (0, weight = 1)
@@ -178,20 +217,15 @@ class SpreadSheet:
         headerCell.widget.grid (row = 0, column = 0, sticky = 'news')
 
         i = 1
-        maxLen = 10
+        maxWidth = 10
         for category in categories:
             button = tk.Button (frame, text = category)
             button.grid (row = i, column = 0, sticky = 'news')
             button.configure (command = lambda category = button['text'], editableCell = editableCell : self.SelectCategory (category, editableCell))
             i += 1
-            maxLen = max (maxLen, len (category) * 7 + 10)
+            maxWidth = max (maxWidth, len (category) * 7 + 10)
 
-        self.nextImage = tk.PhotoImage (file = r'C:\dev\python\paned_window\Button Next_256.png').subsample (15, 15)
-        nextButton = tk.Button (frame, text = 'Save and Next ', image = self.nextImage, compound = tk.RIGHT, command = self.MoveToNext)
-        nextButton.grid (row = i + 1, column = 0, sticky = 'e')
-        nextButton.configure (anchor = 'e')
-
-        self.panedWindow.add (frame, width = maxLen)
+        self.panedWindow.add (frame, width = maxWidth)
 
     def onFrameConfigure(self, canvas):
         '''Reset the scroll region to encompass the inner frame'''
