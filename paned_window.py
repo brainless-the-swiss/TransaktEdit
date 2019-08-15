@@ -34,6 +34,46 @@ class FakeDataForTests (SelectedData):
         categoryIndex = self.column_names.index ('category_id')
         self.rows_list[currentIndex][categoryIndex] = category
 
+class DataFromCsv (SelectedData):
+    def __init__ (self, path, lineStart = 0, nrows = 10, maxrows = 100):
+        '''Select data from a csv file
+        path: full path to csv file, expected type Path from pathlib (because it's cross platform)
+        lineStart: first line to select
+        nrows: numner of rows to select
+        maxrows: maximum number of rows allowed for selection
+        '''
+        super ().__init__ ()
+        self.path = path
+        self.lineStart = lineStart
+        self.nrows = nrows
+        self.maxrows = maxrows
+        assert lineStart >= 0 and nrows >= 0 and maxrows >= 0
+        assert path.is_file ()
+
+        self.select ()
+
+    def select (self):
+        data = pd.read_csv (
+            self.path,
+            sep = ';',
+            engine = 'python',
+            skipinitialspace = True,
+            skiprows = range (1, max (self.lineStart - 1, 0)),
+            nrows = min (self.nrows, self.maxrows),
+            )
+        self.rows_list = data.to_numpy ().tolist ()
+        self.column_names = data.columns
+        self.categories = ['airline', 'banking transaction', 'restaurant/shop/convenience store', 'online shopping', 'cash withdrawal']
+    
+    def save (self, rowIndex, row):
+        self.rows_list[rowIndex] = row
+
+        #Todo: save to csv file
+
+    def selectCategory (self, category, currentIndex):
+        categoryIndex = self.column_names.index ('category_id')
+        self.rows_list[currentIndex][categoryIndex] = category
+
 class Cell:
     def __init__ (self, parent, value = None):
         self.var = tk.StringVar ()
