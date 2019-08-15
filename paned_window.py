@@ -1,4 +1,8 @@
 import tkinter as tk
+import pandas as pd
+import os
+import sys
+from pathlib import Path
 
 class SelectedData:
     def __init__ (self, column_names = None, rows_list = None, categories = None):
@@ -189,7 +193,9 @@ class SpreadSheet:
         panedWindow.add (frame, stretch = "always")
 
     def AddNextButton (self):
-        self.nextImage = tk.PhotoImage (file = r'C:\dev\python\paned_window\Button Next_256.png').subsample (15, 15)
+        curDir = os.path.dirname (os.path.realpath (sys.argv[0]))
+        nextButtonPath = os.path.join (curDir, 'Button Next_256.png')
+        self.nextImage = tk.PhotoImage (file = nextButtonPath).subsample (15, 15)
         nextButton = tk.Button (
             self.frameRoot,
             text = 'Save and Next ',
@@ -201,7 +207,9 @@ class SpreadSheet:
         nextButton.pack (side = tk.LEFT, anchor = 'w', pady = 10, padx = 10)
 
     def AddPrevButton (self):
-        self.prevImage = tk.PhotoImage (file = r'C:\dev\python\paned_window\Button Previous_256.png').subsample (15, 15)
+        curDir = os.path.dirname (os.path.realpath (sys.argv[0]))
+        prevButtonPath = os.path.join (curDir, 'Button Previous_256.png')
+        self.prevImage = tk.PhotoImage (file = prevButtonPath).subsample (15, 15)
         nextButton = tk.Button (
             self.frameRoot,
             text = ' Save and Previous',
@@ -264,7 +272,7 @@ class SpreadSheet:
             button.configure (command = lambda category = button['text'], editableCell = editableCell : self.SelectCategory (category, editableCell))
             i += 1
             maxWidth = max (maxWidth, len (category) * 7 + 10)
-
+        
         self.panedWindow.add (frame, width = maxWidth)
 
     def onFrameConfigure(self, canvas):
@@ -274,4 +282,4 @@ class SpreadSheet:
     def Run (self):
         self.root.mainloop ()
 
-SpreadSheet ().Run ()
+SpreadSheet (selected_data = DataFromCsv (Path ("C:/dev/python/trainBuf.csv"), lineStart = 100, nrows = 30)).Run ()
