@@ -144,7 +144,7 @@ class SpreadSheet:
         #Todo:
         #The width needs to exceed the sum of widths of each column (except the last empty column)
         #We need to use another number for this width...
-        self.panedWindow.config (width = 2000)
+        self.panedWindow.config (width = 4000)
 
         #self.frameRoot.update_idletasks ()
         self.frameRoot.bind ("<Configure>", lambda event, canvas = self.canvas: self.onFrameConfigure (self.canvas))
@@ -170,7 +170,11 @@ class SpreadSheet:
         frame.columnconfigure (0, weight = 1)
         frame.rowconfigure (1, weight = 1)
 
-        self.panedWindow.add (frame, width = max (len (headerText), len (str (firstRow))) * 7 + 10)
+        minWidth = 30
+        txtLen = max (len (headerText), len (str (firstRow))) * 7 + 10
+        width = max (minWidth, txtLen)
+
+        self.panedWindow.add (frame, minsize = width)
 
         headerCell = HeaderCell (frame, headerText)
         editableCell = EditableCell (frame, firstRow)
