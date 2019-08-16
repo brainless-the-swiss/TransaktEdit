@@ -2,6 +2,7 @@ import tkinter as tk
 import pandas as pd
 import os
 import sys
+import json
 from pathlib import Path
 
 class SelectedData:
@@ -39,7 +40,7 @@ class FakeDataForTests (SelectedData):
         self.rows_list[currentIndex][categoryIndex] = category
 
 class DataFromCsv (SelectedData):
-    def __init__ (self, path, lineStart = 0, nrows = 10, maxrows = 100):
+    def __init__ (self, lineStart = 0, nrows = 10, maxrows = 100):
         '''Select data from a csv file
         path: full path to csv file, expected type Path from pathlib (because it's cross platform)
         lineStart: first line to select
@@ -47,14 +48,21 @@ class DataFromCsv (SelectedData):
         maxrows: maximum number of rows allowed for selection
         '''
         super ().__init__ ()
-        self.path = path
+        self.path = self.pathFromJson ()
         self.lineStart = lineStart
         self.nrows = nrows
         self.maxrows = maxrows
         assert lineStart >= 0 and nrows >= 0 and maxrows >= 0
-        assert path.is_file ()
+        assert self.path.is_file ()
 
         self.select ()
+
+    def pathFromJson (self):
+        curDir = os.path.dirname (os.path.realpath (sys.argv[0]))
+        pathsFile = os.path.join (curDir, 'paths.json')
+        jsonFile = open (pathsFile)
+        jsonData = json.load (jsonFile)
+        return Path (jsonData['data'])
 
     def select (self):
         data = pd.read_csv (
@@ -286,4 +294,4 @@ class SpreadSheet:
     def Run (self):
         self.root.mainloop ()
 
-SpreadSheet (selected_data = DataFromCsv (Path ("C:/dev/python/trainBuf.csv"), lineStart = 100, nrows = 30)).Run ()
+SpreadSheet (selected_data = DataFromCsv (lineStart = 100, nrows = 30)).Run ()
