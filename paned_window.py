@@ -49,6 +49,7 @@ class DataFromCsv (SelectedData):
         '''
         super ().__init__ ()
         self.path = self.pathFromJson ()
+        self.categoriesPath = self.categoriesFromJson ()
         self.lineStart = lineStart
         self.nrows = nrows
         self.maxrows = maxrows
@@ -57,12 +58,17 @@ class DataFromCsv (SelectedData):
 
         self.select ()
 
-    def pathFromJson (self):
+    def loadedJsonValue (self):
         curDir = os.path.dirname (os.path.realpath (sys.argv[0]))
         pathsFile = os.path.join (curDir, 'paths.json')
         jsonFile = open (pathsFile)
-        jsonData = json.load (jsonFile)
-        return Path (jsonData['data'])
+        return json.load (jsonFile)
+
+    def pathFromJson (self):
+        return Path (self.loadedJsonValue ()['data'])
+
+    def categoriesFromJson (self):
+        return Path (self.loadedJsonValue ()['categories'])
 
     def select (self):
         data = pd.read_csv (
