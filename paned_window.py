@@ -120,9 +120,15 @@ class Cell:
     def edit (self, *args):
         raise NotImplementedError ()
 
+    def display (self):
+        raise NotImplementedError ()
+
 class HeaderCell (Cell):
     def __init__ (self, parent, value = None):
         self.widget = tk.Label (parent, text = value, font = 'Helvetica 8 bold')
+
+    def display (self):
+        self.widget.pack ()
 
 class EditableCell (Cell):
     def __init__ (self, parent, value = None):
@@ -130,7 +136,6 @@ class EditableCell (Cell):
         self.labelVar = tk.StringVar ()
         self.widgetOriginal = tk.Label (parent, textvariable = self.labelVar, justify = 'center')
         self.widgetOriginal.config (disabledforeground = "red", state = "disabled")
-        self.widgetOriginal.grid (row = 2, column = 0, sticky = 'news')
 
     def edit (self, *args):
         if str (self.var.get ()) == str (self.oldValue):
@@ -139,6 +144,10 @@ class EditableCell (Cell):
         else:
             self.labelVar.set (self.oldValue)
             self.widget.config (fg = 'green')
+
+    def display (self):
+        self.widget.pack (expand = True, fill = tk.BOTH)
+        self.widgetOriginal.pack ()
 
 class SpreadSheet:
     def __init__(self, selected_data=FakeDataForTests()):
@@ -194,29 +203,23 @@ class SpreadSheet:
     def AddColumn (self, headerText, firstRow):
         #Put the entire column in a frame
         frame = tk.Frame (self.panedWindow)
-        frame.grid (column = 0, row = 0, sticky = 'news')
-        frame.columnconfigure (0, weight = 1)
-        frame.rowconfigure (1, weight = 1)
+        frame.pack (anchor = 'n', fill = tk.BOTH, expand = False, side = tk.TOP)
 
         minWidth = 30
         txtLen = max (len (headerText), len (str (firstRow))) * 7 + 10
         width = max (minWidth, txtLen)
 
-        self.panedWindow.add (frame, minsize = width)
+        self.panedWindow.add (frame, sticky = 'new', minsize = width)
 
         headerCell = HeaderCell (frame, headerText)
         editableCell = EditableCell (frame, firstRow)
 
-        headerCell.widget.grid (row = 0, column = 0, sticky = 'news')
-        editableCell.widget.grid (row = 1, column = 0, sticky = 'news')
+        headerCell.display ()
+        editableCell.display ()
 
         #Add empty cells in order to fill the empty space at the bottom of the column
-        if headerText != 'candidate category ids':
-            emptyCells = [tk.Label (frame) for i in range (max (0, len (self.selected_data.categories) - 1))]
-            i = 3
-            for emptyCell in emptyCells:
-                emptyCell.grid (row = i, column = 0, sticky = 'news', rowspan = 1)
-                i += 1
+        emptyCell = tk.Label (frame)
+        emptyCell.pack ()
 
         return editableCell
 
@@ -299,7 +302,7 @@ class SpreadSheet:
         i = 1
         maxWidth = 10
         for category in categories:
-            button = tk.Button (frame, text = category)
+            button = tk.Button (frame, text = category, anchor = 'n')
             button.grid (row = i, column = 0, sticky = 'news')
             button.configure (command = lambda category = button['text'], editableCell = editableCell : self.SelectCategory (category, editableCell))
             i += 1
