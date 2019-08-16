@@ -71,6 +71,10 @@ class DataFromCsv (SelectedData):
         return Path (self.loadedJsonValue ()['categories'])
 
     def select (self):
+        self.selectData ()
+        self.selectCategories ()
+        
+    def selectData (self):
         data = pd.read_csv (
             self.path,
             sep = ';',
@@ -81,15 +85,25 @@ class DataFromCsv (SelectedData):
             )
         self.rows_list = data.to_numpy ().tolist ()
         self.column_names = data.columns
-        self.categories = ['airline', 'banking transaction', 'restaurant/shop/convenience store', 'online shopping', 'cash withdrawal']
-    
+
+    def selectCategories (self):
+        categories = pd.read_csv (
+            self.categoriesPath,
+            sep = ',',
+            engine = 'python',
+            skipinitialspace = True,
+        )
+        #self.categories = ['airline', 'banking transaction', 'restaurant/shop/convenience store', 'online shopping', 'cash withdrawal']
+        dfCategories = categories.loc[:, ['category_descr']]
+        self.categories = dfCategories.to_numpy ().tolist ()
+
     def save (self, rowIndex, row):
         self.rows_list[rowIndex] = row
 
         #Todo: save to csv file
 
     def selectCategory (self, category, currentIndex):
-        categoryIndex = self.column_names.index ('category_id')
+        categoryIndex = self.column_names.get_loc ('category_id')
         self.rows_list[currentIndex][categoryIndex] = category
 
 class Cell:
@@ -135,7 +149,7 @@ class SpreadSheet:
 
         self.root = tk.Tk ()
 
-        self.canvas = tk.Canvas (self.root, borderwidth = 0, background = '#ffffff', width = 1000)
+        self.canvas = tk.Canvas (self.root, borderwidth = 0, background = '#ffffff', width = 1000, height = 600)
 
         self.frameRoot = tk.Frame (self.canvas, background = '#ffffff')
 
@@ -291,7 +305,7 @@ class SpreadSheet:
             i += 1
             maxWidth = max (maxWidth, len (category) * 7 + 10)
         
-        self.panedWindow.add (frame, width = maxWidth)
+        self.panedWindow.add (frame, minsize = maxWidth)
 
     def onFrameConfigure(self, canvas):
         '''Reset the scroll region to encompass the inner frame'''
