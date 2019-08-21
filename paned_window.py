@@ -3,6 +3,8 @@ import pandas as pd
 import os
 import sys
 import json
+import sqlite3
+from sqlite3 import Error
 from pathlib import Path
 
 class SelectedData:
@@ -38,6 +40,87 @@ class FakeDataForTests (SelectedData):
     def selectCategory (self, category, currentIndex):
         categoryIndex = self.column_names.index ('category_id')
         self.rows_list[currentIndex][categoryIndex] = category
+
+class SqliteData:
+    def __init__ (self):
+        self.filePath = \
+            self.__joinedDir (
+                self.__joinedDir (
+                    os.environ ['APPDATA'],
+                    'ubank'
+                ),
+                'dataEditing'
+            )
+        self.filename = os.path.join (self.filePath, 'transactions.db')
+        os.remove (self.filename)
+
+        self.connection = None
+        try:
+            self.connection = sqlite3.connect (self.filename)
+        except Error as e:
+            print (e)
+
+    def __joinedDir (self, baseFolder, appended):
+        folderName = os.path.join (baseFolder, appended)
+        if not os.path.isdir (folderName):
+            os.mkdir (folderName)
+        return folderName
+
+    def close (self):
+        if self.connection:
+            self.connection.close ()
+
+    def __createTable (self, create_table_sql):
+        try:
+            c = self.connection.cursor()
+            c.execute (create_table_sql)
+        except Error as e:
+            print (e)
+
+    def __createCategoriesTable (self):
+        sql_create_table = """ CREATE TABLE IF NOT EXISTS categories (
+                               id integer PRIMARY KEY,
+                               category text NOT NULL
+                            ); """
+        self.__createTable (sql_create_table)
+
+    def __createTransactionsTable (self):
+        sql_create_table = """  CREATE TABLE IF NOT EXISTS transactions (
+                                id integer PRIMARY KEY,
+                                transaction_id integer NOT NULL,
+                                category text NOT NULL
+                            );"""
+        self.__createTable (sql_create_table)
+
+    def __saveCategories (self, categories):
+        self.__createCategoriesTable ()
+        cur = self.connection.cursor ()
+        for category in categories:
+            sql = ''' INSERT INTO categories (category) VALUES (?)'''
+            cur.execute (sql, (category,))
+
+    def __saveTransactions (self, rows_list, column_names):
+        self.__createTransactionsTable ()
+        categoryIndex = column_names.index ("category_id")
+        for row in rows_list:
+            sql = ''' INSERT INTO transactions (transaction_id, category) VALUES (?, ?)'''
+            cur = self.connection.cursor ()
+            cur.execute (sql, (row[0], row[categoryIndex]))
+
+    def save (self, selectedData):
+        self.__saveCategories (selectedData.categories)
+        self.__saveTransactions (selectedData.rows_list, selectedData.column_names)
+
+    def update (self, transactionId, category):
+        sql = ''' UPDATE transactions SET category = ? WHERE transaction_id = ? '''
+        cur = self.connection.cursor ()
+        cur.execute (sql, (category, transactionId))
+
+    def selectTransaction (self, transactionId):
+        cur = self.connection.cursor()
+        cur.execute("SELECT * FROM transactions WHERE transaction_id = ?", (transactionId,))
+        result = cur.fetchall ()
+        return result[0]
 
 class DataFromCsv (SelectedData):
     def __init__ (self, lineStart = 0, nrows = 10, maxrows = 100):
