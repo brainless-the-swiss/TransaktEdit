@@ -151,6 +151,7 @@ class DataFromCsv (SelectedData):
         assert lineStart >= 0 and nrows >= 0 and maxrows >= 0
         assert self.path.is_file ()
 
+        self.db = SqliteData ()
         self.select ()
 
     def loadedJsonValue (self):
@@ -168,6 +169,7 @@ class DataFromCsv (SelectedData):
     def select (self):
         self.selectData ()
         self.selectCategories ()
+        self.db.save (self)
         
     def selectData (self):
         data = pd.read_csv (
@@ -179,7 +181,7 @@ class DataFromCsv (SelectedData):
             nrows = min (self.nrows, self.maxrows),
             )
         self.rows_list = data.to_numpy ().tolist ()
-        self.column_names = data.columns
+        self.column_names = data.columns.to_numpy ().tolist ()
 
     def selectCategories (self):
         categories = pd.read_csv (
@@ -189,17 +191,20 @@ class DataFromCsv (SelectedData):
             skipinitialspace = True,
         )
         #self.categories = ['airline', 'banking transaction', 'restaurant/shop/convenience store', 'online shopping', 'cash withdrawal']
-        dfCategories = categories.loc[:, ['category_descr']]
+        dfCategories = categories.loc[:, 'category_descr']
         self.categories = dfCategories.to_numpy ().tolist ()
+
+    def __categoryIndex (self):
+        return self.column_names.index ('category_id')
 
     def save (self, rowIndex, row):
         self.rows_list[rowIndex] = row
 
-        #Todo: save to csv file
+        #Update the db
+        self.db.update (row[0], row[self.__categoryIndex ()])
 
     def selectCategory (self, category, currentIndex):
-        categoryIndex = self.column_names.get_loc ('category_id')
-        self.rows_list[currentIndex][categoryIndex] = category
+        self.rows_list[currentIndex][self.__categoryIndex ()] = category
 
 class Cell:
     def __init__ (self, parent, value = None):
@@ -363,22 +368,24 @@ class SpreadSheet:
     def MoveToNext (self):
         #Save to the current data
         self.selected_data.save (self.current_index, [cell.var.get () for cell in self.editableCells])
-        self.UpdateCells (self.current_index)
 
         #Move the index
         if self.current_index < len (self.selected_data.rows_list) - 1:
             self.current_index += 1
-            self.UpdateCells (self.current_index)
+
+        #Update the UI
+        self.UpdateCells (self.current_index)
 
     def MoveToPrev (self):
         #Save to the current data
         self.selected_data.save (self.current_index, [cell.var.get () for cell in self.editableCells])
-        self.UpdateCells (self.current_index)
 
         #Move the index
         if self.current_index > 0:
             self.current_index -= 1
-            self.UpdateCells (self.current_index)
+            
+        #Update the UI
+        self.UpdateCells (self.current_index)
 
     def SelectCategory (self, category, editableCell):
         self.currentCategory = category
