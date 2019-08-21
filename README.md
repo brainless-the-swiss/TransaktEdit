@@ -10,6 +10,7 @@ To use it, start by editing the paths.json file:
  - "outputCsv": full path name to the output csv
 
 Now you're ready to run it.
+This is in python 3, and was tested on Windows 10.
 
 ## Unit tests
 
