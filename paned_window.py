@@ -1,5 +1,7 @@
 import tkinter as tk
+from tkinter import messagebox
 import pandas as pd
+import numpy as np
 import os
 import sys
 import json
@@ -134,37 +136,43 @@ class SqliteData:
         result = cur.fetchall ()
         return result[0]
 
-class DataFromCsv (SelectedData):
-    def __init__ (self, lineStart = 0, nrows = 10, maxrows = 100):
-        '''Select data from a csv file
-        path: full path to csv file, expected type Path from pathlib (because it's cross platform)
-        lineStart: first line to select
-        nrows: numner of rows to select
-        maxrows: maximum number of rows allowed for selection
-        '''
-        super ().__init__ ()
-        self.path = self.pathFromJson ()
-        self.categoriesPath = self.categoriesFromJson ()
-        self.lineStart = lineStart
-        self.nrows = nrows
-        self.maxrows = maxrows
-        assert lineStart >= 0 and nrows >= 0 and maxrows >= 0
-        assert self.path.is_file ()
-
-        self.db = SqliteData ()
-        self.select ()
-
-    def loadedJsonValue (self):
+class PathsFromJson:
+    def __loadedJsonValue (self):
         curDir = os.path.dirname (os.path.realpath (sys.argv[0]))
         pathsFile = os.path.join (curDir, 'paths.json')
         jsonFile = open (pathsFile)
         return json.load (jsonFile)
 
-    def pathFromJson (self):
-        return Path (self.loadedJsonValue ()['data'])
+    def dataPath (self):
+        return Path (self.__loadedJsonValue ()['data'])
 
-    def categoriesFromJson (self):
-        return Path (self.loadedJsonValue ()['categories'])
+    def categoriesPath (self):
+        return Path (self.__loadedJsonValue ()['categories'])
+
+    def outputCsvPath (self):
+        return Path (self.__loadedJsonValue ()['outputCsv'])
+
+class DataFromCsv (SelectedData):
+    def __init__ (self, lineStart = 0, nrows = None):
+        '''Select data from a csv file
+        path: full path to csv file, expected type Path from pathlib (because it's cross platform)
+        lineStart: first line to select
+        nrows: numner of rows to select
+        '''
+        super ().__init__ ()
+        self.pathsFromJson = PathsFromJson ()
+        self.path = self.pathsFromJson.dataPath ()
+        self.categoriesPath = self.pathsFromJson.categoriesPath ()
+        self.lineStart = lineStart
+        self.nrows = nrows
+        assert lineStart >= 0
+        if nrows:
+            assert nrows >= 0
+        assert self.path.is_file ()
+        assert self.categoriesPath.is_file ()
+
+        self.db = SqliteData ()
+        self.select ()
 
     def select (self):
         self.selectData ()
@@ -178,7 +186,7 @@ class DataFromCsv (SelectedData):
             engine = 'python',
             skipinitialspace = True,
             skiprows = range (1, max (self.lineStart - 1, 0)),
-            nrows = min (self.nrows, self.maxrows),
+            nrows = self.nrows if self.nrows else None,
             )
         self.rows_list = data.to_numpy ().tolist ()
         self.column_names = data.columns.to_numpy ().tolist ()
@@ -277,6 +285,7 @@ class SpreadSheet:
 
         self.AddPrevButton ()
         self.AddNextButton ()
+        self.AddSaveToCsvButton ()
 
         #Todo:
         #The width needs to exceed the sum of widths of each column (except the last empty column)
@@ -287,6 +296,9 @@ class SpreadSheet:
         self.frameRoot.bind ("<Configure>", lambda event, canvas = self.canvas: self.onFrameConfigure (self.canvas))
 
         self.canvas.pack (side = 'left', fill = 'both', expand = "yes")
+
+        self.pathsFromJson = PathsFromJson ()
+        self.outputPath = self.pathsFromJson.outputCsvPath ()
 
     def AddColumns (self):
         nColumns = len (self.selected_data.column_names)
@@ -355,6 +367,20 @@ class SpreadSheet:
             )
         nextButton.pack (side = tk.LEFT, anchor = 'w', pady = 10, padx = 10)
 
+    def AddSaveToCsvButton (self):
+        curDir = os.path.dirname (os.path.realpath (sys.argv[0]))
+        buttonPath = os.path.join (curDir, 'Button_save_as_csv.png')
+        self.saveCsvImage = tk.PhotoImage (file = buttonPath).subsample (3, 3)
+        nextButton = tk.Button (
+            self.frameRoot,
+            text = 'Save to CSV file ',
+            image = self.saveCsvImage,
+            compound = tk.RIGHT,
+            command = self.SaveToCsv,
+            pady = 10
+            )
+        nextButton.pack (side = tk.BOTTOM, anchor = 'w', pady = 10, padx = 10)
+
     def UpdateCells (self, row):
         i = 0
         for cell in self.editableCells:
@@ -412,6 +438,10 @@ class SpreadSheet:
         
         self.panedWindow.add (frame, minsize = maxWidth)
 
+    def SaveToCsv (self):
+        df = pd.DataFrame (np.array (self.selected_data.rows_list), columns = self.selected_data.column_names)
+        df.to_csv (self.outputPath)
+
     def onFrameConfigure(self, canvas):
         '''Reset the scroll region to encompass the inner frame'''
         canvas.configure(scrollregion=self.canvas.bbox("all"))
@@ -420,7 +450,7 @@ class SpreadSheet:
         self.root.mainloop ()
 
 if __name__ == '__main__':
-    SpreadSheet (selected_data = DataFromCsv (lineStart = 100, nrows = 30)).Run ()
+    SpreadSheet (selected_data = DataFromCsv ()).Run ()
 
 ### Unit tests ###
 import unittest

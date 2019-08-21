@@ -1,4 +1,5 @@
 {
     "data" : "C:/dev/python/trainBuf.csv",
-    "categories" : "C:/dev/python/categories_treeBuf.csv"
+    "categories" : "C:/dev/python/categories_treeBuf.csv",
+    "outputCsv" : "C:/dev/python/trainBufOutput.csv"
 }
