@@ -1,4 +1,4 @@
-# Transaction labelling for ubank
+# Transaction labelling
 
 ## What it is and how to use it
 
