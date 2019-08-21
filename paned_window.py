@@ -41,9 +41,13 @@ class FakeDataForTests (SelectedData):
         categoryIndex = self.column_names.index ('category_id')
         self.rows_list[currentIndex][categoryIndex] = category
 
-class SqliteData:
-    def __init__ (self):
-        self.filePath = \
+class SqliteFile:
+    def filename (self):
+        raise NotImplementedError
+
+class SqliteDefaultFile (SqliteFile):
+    def filename (self):
+        filePath = \
             self.__joinedDir (
                 self.__joinedDir (
                     os.environ ['APPDATA'],
@@ -51,20 +55,28 @@ class SqliteData:
                 ),
                 'dataEditing'
             )
-        self.filename = os.path.join (self.filePath, 'transactions.db')
-        os.remove (self.filename)
-
-        self.connection = None
-        try:
-            self.connection = sqlite3.connect (self.filename)
-        except Error as e:
-            print (e)
+        fullPath = os.path.join (filePath, 'transactions.db')
+        os.remove (fullPath)
+        return fullPath
 
     def __joinedDir (self, baseFolder, appended):
         folderName = os.path.join (baseFolder, appended)
         if not os.path.isdir (folderName):
             os.mkdir (folderName)
         return folderName
+    
+class SqliteMemoryFile (SqliteFile):
+    def filename (self):
+        return ":memory:"
+
+class SqliteData:
+    def __init__ (self, filename = SqliteDefaultFile ()):
+        self.filename = filename
+        self.connection = None
+        try:
+            self.connection = sqlite3.connect (self.filename.filename ())
+        except Error as e:
+            print (e)
 
     def close (self):
         if self.connection:
@@ -400,4 +412,22 @@ class SpreadSheet:
     def Run (self):
         self.root.mainloop ()
 
-SpreadSheet (selected_data = DataFromCsv (lineStart = 100, nrows = 30)).Run ()
+if __name__ == '__main__':
+    SpreadSheet (selected_data = DataFromCsv (lineStart = 100, nrows = 30)).Run ()
+
+### Unit tests ###
+import unittest
+class TestSqlite (unittest.TestCase):
+    def testUpdate (self):
+        db = SqliteData (filename = SqliteMemoryFile ())
+        data = FakeDataForTests ()
+        
+        db.save (data)
+        transactionId = data.rows_list[0][0]
+        selectedCategory = data.categories[2]
+        db.update (transactionId, selectedCategory)
+        
+        actualCategory = db.selectTransaction (transactionId)[2]
+        db.close ()
+
+        self.assertEqual (actualCategory, selectedCategory)
