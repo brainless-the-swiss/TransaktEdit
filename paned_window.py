@@ -417,8 +417,8 @@ if __name__ == '__main__':
 
 ### Unit tests ###
 import unittest
-class TestSqlite (unittest.TestCase):
-    def testUpdate (self):
+class Tests (unittest.TestCase):
+    def testSqliteUpdate (self):
         db = SqliteData (filename = SqliteMemoryFile ())
         data = FakeDataForTests ()
         
@@ -431,3 +431,5 @@ class TestSqlite (unittest.TestCase):
         db.close ()
 
         self.assertEqual (actualCategory, selectedCategory)
+
+    #Todo: test that pressing "next" and "prev" buttons effectively saves to the db
