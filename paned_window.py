@@ -381,6 +381,8 @@ class SpreadSheet:
             )
         nextButton.pack (side = tk.BOTTOM, anchor = 'w', pady = 10, padx = 10)
 
+        self.root.protocol ("WM_DELETE_WINDOW", self.onClosing)
+
     def UpdateCells (self, row):
         i = 0
         for cell in self.editableCells:
@@ -391,9 +393,12 @@ class SpreadSheet:
             cell.edit ()
             i += 1
 
-    def MoveToNext (self):
-        #Save to the current data
+    def SaveFromUI (self):
         self.selected_data.save (self.current_index, [cell.var.get () for cell in self.editableCells])
+
+    def MoveToNext (self):
+        #Save to the current data from the UI
+        self.SaveFromUI ()
 
         #Move the index
         if self.current_index < len (self.selected_data.rows_list) - 1:
@@ -403,8 +408,8 @@ class SpreadSheet:
         self.UpdateCells (self.current_index)
 
     def MoveToPrev (self):
-        #Save to the current data
-        self.selected_data.save (self.current_index, [cell.var.get () for cell in self.editableCells])
+        #Save to the current data from the UI
+        self.SaveFromUI ()
 
         #Move the index
         if self.current_index > 0:
@@ -416,7 +421,7 @@ class SpreadSheet:
     def SelectCategory (self, category, editableCell):
         self.currentCategory = category
         editableCell.var.set (category)
-        self.selected_data.selectCategory (category, self.current_index)
+        #self.selected_data.selectCategory (category, self.current_index)
 
     def AddCategoryColumn (self, categories, editableCell):
         frame = tk.Frame (self.panedWindow)
@@ -439,8 +444,24 @@ class SpreadSheet:
         self.panedWindow.add (frame, minsize = maxWidth)
 
     def SaveToCsv (self):
+        self.SaveFromUI ()
         df = pd.DataFrame (np.array (self.selected_data.rows_list), columns = self.selected_data.column_names)
         df.to_csv (self.outputPath)
+
+        #Update the UI
+        self.UpdateCells (self.current_index)
+
+        messagebox.showinfo ("Saved to CSV", "Saved to CSV")
+
+    def onClosing (self):
+        confirm = messagebox.askyesnocancel ("Quit", "Save to CSV before quitting?")
+        if confirm: #yes
+            self.SaveToCsv ()
+            self.root.destroy ()
+        elif confirm is None: #cancel
+            return
+        else: #no
+            self.root.destroy ()
 
     def onFrameConfigure(self, canvas):
         '''Reset the scroll region to encompass the inner frame'''
