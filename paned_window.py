@@ -171,13 +171,13 @@ class DataFromCsv (SelectedData):
         assert self.path.is_file ()
         assert self.categoriesPath.is_file ()
 
-        self.db = SqliteData ()
+        #self.db = SqliteData ()
         self.select ()
 
     def select (self):
         self.selectData ()
         self.selectCategories ()
-        self.db.save (self)
+        #self.db.save (self)
         
     def selectData (self):
         data = pd.read_csv (
@@ -209,7 +209,7 @@ class DataFromCsv (SelectedData):
         self.rows_list[rowIndex] = row
 
         #Update the db
-        self.db.update (row[0], row[self.__categoryIndex ()])
+        #self.db.update (row[0], row[self.__categoryIndex ()])
 
     def selectCategory (self, category, currentIndex):
         self.rows_list[currentIndex][self.__categoryIndex ()] = category
