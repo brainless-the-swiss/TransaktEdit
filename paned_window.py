@@ -188,8 +188,15 @@ class DataFromCsv (SelectedData):
             skiprows = range (1, max (self.lineStart - 1, 0)),
             nrows = self.nrows if self.nrows else None,
             )
-        self.rows_list = data.to_numpy ().tolist ()
+
         self.column_names = data.columns.to_numpy ().tolist ()
+        categoryIndex = self.column_names.index ('category_id')
+        descrIndex = self.column_names.index ('description')
+        self.column_names[0], self.column_names[descrIndex] = self.column_names[descrIndex], self.column_names[0]
+        self.column_names[1], self.column_names[categoryIndex] = self.column_names[categoryIndex], self.column_names[1]
+
+        data = data[self.column_names]
+        self.rows_list = data.to_numpy ().tolist ()
 
     def selectCategories (self):
         categories = pd.read_csv (
