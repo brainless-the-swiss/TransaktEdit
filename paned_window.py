@@ -360,6 +360,8 @@ class SpreadSheet:
             )
         nextButton.pack (side = tk.LEFT, anchor = 'w', pady = 10, padx = 10)
 
+        self.root.bind ('<Right>', self.MoveToNext)
+
     def AddPrevButton (self):
         curDir = os.path.dirname (os.path.realpath (sys.argv[0]))
         prevButtonPath = os.path.join (curDir, 'Button Previous_256.png')
@@ -373,6 +375,8 @@ class SpreadSheet:
             pady = 10
             )
         nextButton.pack (side = tk.LEFT, anchor = 'w', pady = 10, padx = 10)
+
+        self.root.bind ('<Left>', self.MoveToPrev)
 
     def AddSaveToCsvButton (self):
         curDir = os.path.dirname (os.path.realpath (sys.argv[0]))
@@ -403,7 +407,7 @@ class SpreadSheet:
     def SaveFromUI (self):
         self.selected_data.save (self.current_index, [cell.var.get () for cell in self.editableCells])
 
-    def MoveToNext (self):
+    def MoveToNext (self, event):
         #Save to the current data from the UI
         self.SaveFromUI ()
 
@@ -414,7 +418,7 @@ class SpreadSheet:
         #Update the UI
         self.UpdateCells (self.current_index)
 
-    def MoveToPrev (self):
+    def MoveToPrev (self, event):
         #Save to the current data from the UI
         self.SaveFromUI ()
 
