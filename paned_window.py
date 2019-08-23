@@ -407,7 +407,7 @@ class SpreadSheet:
     def SaveFromUI (self):
         self.selected_data.save (self.current_index, [cell.var.get () for cell in self.editableCells])
 
-    def MoveToNext (self, event):
+    def MoveToNext (self, event = None):
         #Save to the current data from the UI
         self.SaveFromUI ()
 
@@ -418,7 +418,7 @@ class SpreadSheet:
         #Update the UI
         self.UpdateCells (self.current_index)
 
-    def MoveToPrev (self, event):
+    def MoveToPrev (self, event = None):
         #Save to the current data from the UI
         self.SaveFromUI ()
 
