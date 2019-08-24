@@ -179,6 +179,7 @@ class DataFromCsv (SelectedData):
     def select (self):
         self.selectData ()
         self.selectCategories ()
+        self.mapCategories ()
         #self.db.save (self)
         
     def selectData (self):
@@ -201,17 +202,25 @@ class DataFromCsv (SelectedData):
         self.rows_list = data.to_numpy ().tolist ()
 
     def selectCategories (self):
-        categories = pd.read_csv (
+        self.rawCategories = pd.read_csv (
             self.categoriesPath,
             sep = ',',
             engine = 'python',
             skipinitialspace = True,
         )
-        dfCategories = categories.loc[:, 'category_descr_english']
+        dfCategories = self.rawCategories.loc[:, 'category_descr_english']
         self.categories = dfCategories.to_numpy ().tolist ()
-        dfParentCat = categories.loc[:, 'parent_category_descr_english']
+        dfParentCat = self.rawCategories.loc[:, 'parent_category_descr_english']
         self.parentCategories = dfParentCat.to_numpy ().tolist ()
         self.parentCategories = list (dict.fromkeys (self.parentCategories))
+
+    def mapCategories (self):
+        dfcatIds = self.rawCategories.loc[:, 'category_id']
+        catIds = dfcatIds.to_numpy ().tolist ()
+        mapping = dict (zip (catIds, self.categories))
+        for i in range (len (self.rows_list)):
+            if self.rows_list[i][1] in mapping:
+                self.rows_list[i][1] = mapping[self.rows_list[i][1]]
 
     def __categoryIndex (self):
         return self.column_names.index ('category_id')
