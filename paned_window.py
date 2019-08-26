@@ -10,14 +10,14 @@ from sqlite3 import Error
 from pathlib import Path
 
 class SelectedData:
-    def __init__ (self, column_names = None, rows_list = None, categories = None, parentCategories = None):
+    def __init__ (self, column_names = None, rows_list = None, categories = None, categoriesGUI = None):
         '''List of lists of rows selected
         The point of this class is to make abstraction of the way rows are selected (from csv file, database or fake data)
         '''
         self.column_names = column_names    #name of each column header
         self.rows_list = rows_list          #list of lists of rows selected
-        self.categories = categories
-        self.parentCategories = parentCategories
+        self.categories = categories        #categories to select
+        self.categoriesGUI = categoriesGUI  #categories to be displayed in the GUI (e.g. '[parent category] - [category]')
 
     def save (self, rowIndex, row):
         raise NotImplementedError() #On purpose, this is an interface
@@ -36,7 +36,7 @@ class FakeDataForTests (SelectedData):
             [1534, 2017, 'payment', 200000, 'United Airlines', 987],
         ]
         self.categories = ['airline', 'banking transaction', 'restaurant/shop/convenience store', 'online shopping', 'cash withdrawal']
-        self.parentCategories = ['shopping', 'transfers', 'food']
+        self.categoriesGUI = ['shopping', 'transfers', 'food']
 
     def save (self, rowIndex, row):
         self.rows_list[rowIndex] = row
@@ -211,8 +211,10 @@ class DataFromCsv (SelectedData):
         dfCategories = self.rawCategories.loc[:, 'category_descr_english']
         self.categories = dfCategories.to_numpy ().tolist ()
         dfParentCat = self.rawCategories.loc[:, 'parent_category_descr_english']
-        self.parentCategories = dfParentCat.to_numpy ().tolist ()
-        self.parentCategories = list (dict.fromkeys (self.parentCategories))
+        parentCategories = dfParentCat.to_numpy ().tolist ()
+
+        mapping = list (zip (self.categories, parentCategories))
+        self.categoriesGUI = ['[' + parent + '] - ' + category for category, parent in mapping]
 
     def mapCategories (self):
         dfcatIds = self.rawCategories.loc[:, 'category_id']
@@ -330,8 +332,7 @@ class SpreadSheet:
         for i in range (nColumns):
             self.editableCells[i] = editableCell = self.AddColumn (self.selected_data.column_names[i], self.selected_data.rows_list[0][i])
             if self.selected_data.column_names[i] == 'category_id':
-                self.AddCategoryColumn (self.selected_data.categories, editableCell)
-                self.AddCategoryColumn (self.selected_data.parentCategories, editableCell)
+                self.AddCategoryColumn (self.selected_data.categories, self.selected_data.categoriesGUI, editableCell)
 
         #Add an empty column to make the right most sash resizeable interactively
         self.AddEmptyColumn (self.panedWindow)
@@ -451,18 +452,18 @@ class SpreadSheet:
         editableCell.var.set (category)
         #self.selected_data.selectCategory (category, self.current_index)
 
-    def AddCategoryColumn (self, categories, editableCell):
+    def AddCategoryColumn (self, categories, categoriesGUI, editableCell):
         frame = tk.Frame (self.panedWindow)
         frame.pack (anchor = 'n', fill = tk.BOTH, expand = True, side = tk.TOP)
-
+    
         headerCell = HeaderCell (frame, 'candidate category ids')
         headerCell.widget.pack (fill = tk.BOTH, expand = False, side = tk.TOP)
 
         maxWidth = 10
-        for category in categories:
-            button = tk.Button (frame, text = category, anchor = 'n')
+        for category, catGUI in list (zip (categories, categoriesGUI)):
+            button = tk.Button (frame, text = catGUI, anchor = 'n')
             button.pack (fill = tk.BOTH, expand = False, side = tk.TOP)
-            button.configure (command = lambda category = button['text'], editableCell = editableCell : self.SelectCategory (category, editableCell))
+            button.configure (command = lambda category = category, editableCell = editableCell : self.SelectCategory (category, editableCell))
             maxWidth = max (maxWidth, len (category) * 7 + 10)
         
         self.panedWindow.add (frame, minsize = maxWidth)
