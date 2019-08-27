@@ -351,6 +351,9 @@ class SpreadSheet:
         headerCell = HeaderCell (frame, headerText)
         editableCell = EditableCell (frame, firstRow)
 
+        if headerText != 'category_id':
+            editableCell.widget.config (state = 'readonly')
+
         headerCell.display ()
         editableCell.display ()
 
